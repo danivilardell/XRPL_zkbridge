@@ -24,6 +24,8 @@ type lightClientVerificationCircuit struct {
 	PublicKey [90]PublicKey     `gnark:",public"`
 	Signature [90]Signature     `gnark:",public"`
 	Message   frontend.Variable `gnark:",public"`
+	Zero      frontend.Variable `gnark:",public"`
+	One       frontend.Variable `gnark:",public"`
 }
 
 func (circuit *lightClientVerificationCircuit) Define(api frontend.API) error {
@@ -38,22 +40,22 @@ func (circuit *lightClientVerificationCircuit) Define(api frontend.API) error {
 	}
 
 	var validSignatures [91]frontend.Variable
-	validSignatures[0] = 0
+	validSignatures[0] = circuit.Zero
 	// Verify each signature and increment the counter if it's valid
 	for i := 0; i < len(circuit.PublicKey); i++ {
 		isValid := eddsa.Verify(curve, eddsa.Signature(circuit.Signature[i]), circuit.Message, eddsa.PublicKey(circuit.PublicKey[i]), &mimc)
 		if isValid == nil {
-			validSignatures[i+1] = api.Add(validSignatures[i], 1)
+			validSignatures[i+1] = api.Add(validSignatures[i], circuit.One)
 		} else {
 			validSignatures[i+1] = validSignatures[i]
 		}
 	}
 
 	// Check if at least 80% of the signatures are valid
-	threshold := frontend.Variable((int)((len(circuit.PublicKey)) * 80 / 100))
-	fmt.Println("threshold: ", threshold)
-	//api.AssertIsLessOrEqual(threshold, validSignatures[len(circuit.publicKey)])
-	fmt.Println("threshold2: ", threshold)
+	threshold := api.Mul(circuit.One, (int)(len(circuit.PublicKey)*8/10))
 
+	api.AssertIsLessOrEqual(threshold, validSignatures[len(circuit.PublicKey)])
+
+	fmt.Println("Passed test!")
 	return nil
 }

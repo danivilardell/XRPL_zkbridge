@@ -46,11 +46,16 @@ func TestSignatureValidity(t *testing.T) {
 		circuit.Signature[i].R.Y = key.PublicKey.A.Y.String()
 	}
 
+	circuit.Zero = 0
+	circuit.One = 1
+
 	assert.ProverSucceeded(&circuit, &lightClientVerificationCircuit{
 		CurveID:   circuit.CurveID,
 		Message:   circuit.Message,
 		Signature: circuit.Signature,
 		PublicKey: circuit.PublicKey,
+		Zero:      circuit.Zero,
+		One:       circuit.One,
 	})
 
 }
