@@ -10,40 +10,32 @@ import (
 	"github.com/consensys/gnark/std/signature/eddsa"
 )
 
-type PublicKey struct {
-	A twistededwards.Point
-}
-
-type Signature struct {
-	R twistededwards.Point
-	S frontend.Variable
-}
-
 type lightClientVerificationCircuit struct {
-	CurveID   tedwards.ID       `gnark:",public"`
-	PublicKey [90]PublicKey     `gnark:",public"`
-	Signature [90]Signature     `gnark:",public"`
-	Message   frontend.Variable `gnark:",public"`
-	Zero      frontend.Variable `gnark:",public"`
-	One       frontend.Variable `gnark:",public"`
+	curveID   tedwards.ID
+	PublicKey [90]eddsa.PublicKey `gnark:",public"`
+	Signature [90]eddsa.Signature `gnark:",public"`
+	Message   frontend.Variable   `gnark:",public"`
+	Zero      frontend.Variable   `gnark:",public"`
+	One       frontend.Variable   `gnark:",public"`
 }
 
 func (circuit *lightClientVerificationCircuit) Define(api frontend.API) error {
-	curve, err := twistededwards.NewEdCurve(api, circuit.CurveID)
-	if err != nil {
-		return err
-	}
-
-	mimc, err := mimc.NewMiMC(api)
-	if err != nil {
-		return err
-	}
 
 	var validSignatures [91]frontend.Variable
 	validSignatures[0] = circuit.Zero
 	// Verify each signature and increment the counter if it's valid
 	for i := 0; i < len(circuit.PublicKey); i++ {
-		isValid := eddsa.Verify(curve, eddsa.Signature(circuit.Signature[i]), circuit.Message, eddsa.PublicKey(circuit.PublicKey[i]), &mimc)
+		curve, err := twistededwards.NewEdCurve(api, circuit.curveID)
+		if err != nil {
+			return err
+		}
+
+		mimc, err := mimc.NewMiMC(api)
+		if err != nil {
+			return err
+		}
+
+		isValid := eddsa.Verify(curve, circuit.Signature[i], circuit.Message, circuit.PublicKey[i], &mimc)
 		if isValid == nil {
 			validSignatures[i+1] = api.Add(validSignatures[i], circuit.One)
 		} else {
@@ -56,6 +48,6 @@ func (circuit *lightClientVerificationCircuit) Define(api frontend.API) error {
 
 	api.AssertIsLessOrEqual(threshold, validSignatures[len(circuit.PublicKey)])
 
-	fmt.Println("Passed test!")
+	fmt.Println("Constrains defined")
 	return nil
 }
