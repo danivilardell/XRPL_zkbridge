@@ -11,7 +11,7 @@ import (
 )
 
 type lightClientVerificationCircuit struct {
-	curveID   tedwards.ID
+	curveID   tedwards.ID         `gnark:",public"`
 	PublicKey [90]eddsa.PublicKey `gnark:",public"`
 	Signature [90]eddsa.Signature `gnark:",public"`
 	Message   frontend.Variable   `gnark:",public"`
@@ -25,7 +25,7 @@ func (circuit *lightClientVerificationCircuit) Define(api frontend.API) error {
 	validSignatures[0] = circuit.Zero
 	// Verify each signature and increment the counter if it's valid
 	for i := 0; i < len(circuit.PublicKey); i++ {
-		curve, err := twistededwards.NewEdCurve(api, circuit.curveID)
+		curve, err := twistededwards.NewEdCurve(api, tedwards.BN254)
 		if err != nil {
 			return err
 		}
